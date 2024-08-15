@@ -1,66 +1,38 @@
 const express = require('express');
+const cors = require('cors');
+const session = require('express-session');
+const login = require('./login');
+const registro = require('./registro');
+const { obtenerUsuarios, eliminarUsuarios } = require('./usuarios');
+const validar = require('./validar');
+
 const app = express();
 const port = 3000;
 
-// Get the client
-const mysql = require('mysql2/promise'); // Usar la versión de promesas del módulo mysql2
-const cors = require('cors')
-const session = require('express-session')
 app.use(cors({
-  origin:'http://localhost:5173',
-  credentials:true
-}))
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
+
 app.use(session({
-  secret:'asglkjlkjasdgjhkjka1345345' /*esta clave es aleatoria*/
-}))
-// Create the connection to database
-const connectionConfig = {
-  host: 'localhost',
-  user: 'root',
-  database: 'jdbc',
-};
+  secret: 'asglkjlkjasdgjhkjka1345345',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // Cambiar a `true` si estás usando HTTPS
+}));
+
+app.use(express.json()); // Asegúrate de que esta línea esté incluida para manejar JSON
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-app.get('/login', async (req, res) => {
-  const datos = req.query;
-  console.log(datos);
-
-  try {
-    // Crear una conexión a la base de datos para esta solicitud
-    const connection = await mysql.createConnection(connectionConfig);
-    
-    // A simple SELECT query
-    const [results, fields] = await connection.execute(
-      "SELECT * FROM `servletlogin` WHERE `usuario` = ? AND `contrasena` = ?",
-      [datos.usuario, datos.contrasena]
-    );
-
-    if (results.length > 0) {
-      req.session.usuario = datos.usuario;
-      res.status(200).send('Inicio de sesión correcto')
-    } else {
-      res.status(401).send('Datos Incorrectos')
-    }
-
-    // Cerrar la conexión a la base de datos
-    await connection.end();
-  } catch (err) {
-    console.log(err);
-    res.status(500).send('Error en el servidor');
-  }
-});
-
-app.get('/validar', (req, res) => {
-  if(req.session.usuario){
-    res.status(200).send('validación exitosa');
-  }else{
-    res.status(401).send('No autorizado');
-  }
-});
+app.get('/login', login);
+app.get('/registro', registro);
+app.get('/usuarios', obtenerUsuarios);
+app.delete('/eliminar', eliminarUsuarios);  // Asegúrate de que la ruta sea DELETE
+app.get('/validar', validar);
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+  console.log(`Server running on http://localhost:${port}`);
 });
